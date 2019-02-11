@@ -7,6 +7,6 @@ Ptgfrn
 Itm2a
 Npr3
 Galnt14
-Ccnd1
-Smoc2
-Theg
+Htra1
+Col12a1
+Nek7
