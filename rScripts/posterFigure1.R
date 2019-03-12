@@ -63,6 +63,7 @@ propExpr   = do.call("cbind", tapply(names(specific_type), specific_type, functi
 rownames(medianExpr) <- rownames(propExpr) <- genes <- rownames(data)
 nonZeroMedian = (!rowSums(medianExpr) == 0)
 medianExpr = medianExpr[nonZeroMedian,]
+propExpr = propExpr[nonZeroMedian,]
 maxGene = 'Rorb'
 maxOn = 2^max(medianExpr[maxGene,])-1
 minOn = 0.1
@@ -77,7 +78,7 @@ runGenes <- filterPanelGenes(
   propExpr    = propExpr,    # proportions
   startingGenes  = c(),  # Starting genes 
   numBinaryGenes = 1000,      # Number of binary genes 
-  onClusters = focusGroup,
+  onClusters = as.character(focusGroup),
   minOn     = minOn,   # Minimum required expression in highest expressing cell type
   maxOn     = maxOn,  # Maximum allowed expression
   fractionOnClusters = 0.5,  # Max fraction of on clusters 
