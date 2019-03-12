@@ -100,8 +100,8 @@ for (j in 1:length(clustersToMergeList)){
  newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMergeList[[j]][clustersToMergeList[[j]] %in% specific_type], weight = 0)
  
  for (k in 1:length(lossFunctionList)){
-   fishPanel = getFishPanel(data, runGenes, specific_type, medianExpr, newWeightMatrix, panelSize = 24, focusGroup = focusGroupsList[[i]][focusGroupsList[[i]] %in% specific_type], 
-                                    panelMin = 1, subSamp = 10, startingPanel = c(), lossFunction = lossFunctionList[[k]])
+   fishPanel = getFishPanel(data, runGenes, specific_type, medianExpr, newWeightMatrix, panelSize = 12, focusGroup = focusGroupsList[[i]][focusGroupsList[[i]] %in% specific_type], 
+                                    panelMin = 1, subSamp = 50, startingPanel = c(), lossFunction = lossFunctionList[[k]])
    save(fishPanel, file = paste(savingDirectory, 'markerGenes/allen_markerGenesALM_','focusGroup', as.character(i), 'clustersToMerge', as.character(j),'lossFunction', as.character(k), '.RData', sep = ""))
  }
 }
