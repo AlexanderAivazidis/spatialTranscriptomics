@@ -6,7 +6,7 @@ getWeightMatrix = function(initialWeightMatrix, clustersToMerge, weight = 0){
   return(initialWeightMatrix)
 }
 
-getFishPanelAndFScore = function(mapDat, runGenes, clusters, medianExpr, weightMatrix, panelSize, panelMin = 1, subSamp = 1000,
+getFishPanel = function(mapDat, runGenes, clusters, medianExpr, weightMatrix, panelSize, panelMin = 1, subSamp = 1000,
                                  startingPanel = c(), focusGroup = NA, lossFunction = 'CorrelationDistance'){
   
   require(mfishtools)
@@ -35,9 +35,10 @@ getFishPanelAndFScore = function(mapDat, runGenes, clusters, medianExpr, weightM
     percentSubset = 100                               # Only consider a certain percent of genes each iteration to speed up calculations (in most cases this is not recommeded)
   )
   
-  FList = FscoreWithGenes(fishPanel, mapDat, medianExpr, clusters, focusGroup)
+  #FList = FscoreWithGenes(fishPanel, mapDat, medianExpr, clusters, focusGroup)
   
-  return(list(fishPanel, FList))
+  #return(list(fishPanel, FList))
+  return(fishPanel)
 }
 
 ### Main ###
@@ -45,8 +46,8 @@ getFishPanelAndFScore = function(mapDat, runGenes, clusters, medianExpr, weightM
 require(AllenData)
 require(mfishtools)
 require(matrixStats)
-dataDirectory = '/home/jovyan/allData/AllenData/'
-savingDirectory = '/home/jovyan/spatialTranscriptomics/'
+dataDirectory = '/nfs/team205/aa16/AllenData/'
+savingDirectory = ''
 
 allData = loadAllenData(cortical_area = 'ALM', species = 'mouse', normalization = 'exon+intron_cpm', directory = dataDirectory)
 data = as.matrix(log(allData[[1]]+1,2))
@@ -67,6 +68,7 @@ propExpr   = do.call("cbind", tapply(names(specific_type), specific_type, functi
 rownames(medianExpr) <- rownames(propExpr) <- genes <- rownames(data)
 nonZeroMedian = (!rowSums(medianExpr) == 0)
 medianExpr = medianExpr[nonZeroMedian,]
+propExpr = propExpr[nonZeroMedian,]
 maxGene = 'Rorb'
 maxOn = 2^max(medianExpr[maxGene,])-1
 minOn = 0.1
@@ -78,31 +80,29 @@ weightMatrix = matrix(1,length(unique(specific_type)), length(unique(specific_ty
 colnames(weightMatrix) = rownames(weightMatrix) = unique(specific_type)
 lossFunctionList = c('negative F-Score', 'Correlation Distance')
 
-for (i in 1:length(focusGroupsList)){
-  ### This is the list we will iterate trough to see if focussing on branches closer to our group of interest (focusGroup) will improve performance 
-  clustersToMergeList = list(c(), dendrogramOrder[(length(dendrogramOrder)-15):length(dendrogramOrder)],
-                             dendrogramOrder[c(1:2, 58:length(dendrogramOrder))], dendrogramOrder[!dendrogramOrder %in% focusGroupsList[[i]]])
-  
-  runGenes <- filterPanelGenes(
-    summaryExpr = 2^medianExpr-1,  # medians (could also try means); We enter linear values to match the linear limits below
-    propExpr    = propExpr,    # proportions
-    startingGenes  = c(),  # Starting genes 
-    numBinaryGenes = 1000,      # Number of binary genes 
-    onClusters = focusGroupsList[[i]],
-    minOn     = minOn,   # Minimum required expression in highest expressing cell type
-    maxOn     = maxOn,  # Maximum allowed expression
-    fractionOnClusters = 0.5,  # Max fraction of on clusters 
-    excludeFamilies = c("LOC","Fam","RIK","RPS","RPL","\\-","Gm","Rnf","BC0")) # Avoid LOC markers, in this case
-  
-  for (j in 1:length(clustersToMergeList)){
-   newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMergeList[[j]][clustersToMergeList[[j]] %in% specific_type], weight = 0)
-   
-   for (k in 1:length(lossFunctionList)){
-     results = getFishPanelAndFScore(data, runGenes, specific_type, medianExpr, newWeightMatrix, panelSize = 24, focusGroup = focusGroupsList[[i]][focusGroupsList[[i]] %in% specific_type], 
-                                      panelMin = 1, subSamp = NA, startingPanel = c(), lossFunction = lossFunctionList[[k]])
-     print(results)
-     save(results, file = paste(savingDirectory, 'accuracy/allen_results_','focusGroup', as.character(i), 'clustersToMerge', as.character(j),'lossFunction', as.character(k), '.RData', sep = ""))
-   }
+i = 1
+### This is the list we will iterate trough to see if focussing on branches closer to our group of interest (focusGroup) will improve performance 
+clustersToMergeList = list(c(), dendrogramOrder[(length(dendrogramOrder)-15):length(dendrogramOrder)],
+                           dendrogramOrder[c(1:2, 58:length(dendrogramOrder))], dendrogramOrder[!dendrogramOrder %in% focusGroupsList[[i]]])
+
+runGenes <- filterPanelGenes(
+  summaryExpr = 2^medianExpr-1,  # medians (could also try means); We enter linear values to match the linear limits below
+  propExpr    = propExpr,    # proportions
+  startingGenes  = c(),  # Starting genes 
+  numBinaryGenes = 1000,      # Number of binary genes 
+  onClusters = focusGroupsList[[i]],
+  minOn     = minOn,   # Minimum required expression in highest expressing cell type
+  maxOn     = maxOn,  # Maximum allowed expression
+  fractionOnClusters = 0.5,  # Max fraction of on clusters 
+  excludeFamilies = c("LOC","Fam","RIK","RPS","RPL","\\-","Gm","Rnf","BC0")) # Avoid LOC markers, in this case
+
+for (j in 1:length(clustersToMergeList)){
+ newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMergeList[[j]][clustersToMergeList[[j]] %in% specific_type], weight = 0)
+ 
+ for (k in 1:length(lossFunctionList)){
+   fishPanel = getFishPanel(data, runGenes, specific_type, medianExpr, newWeightMatrix, panelSize = 24, focusGroup = focusGroupsList[[i]][focusGroupsList[[i]] %in% specific_type], 
+                                    panelMin = 1, subSamp = 10, startingPanel = c(), lossFunction = lossFunctionList[[k]])
+   save(fishPanel, file = paste(savingDirectory, 'markerGenes/allen_markerGenesALM_','focusGroup', as.character(i), 'clustersToMerge', as.character(j),'lossFunction', as.character(k), '.RData', sep = ""))
  }
 }
 
