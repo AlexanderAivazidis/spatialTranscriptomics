@@ -1,5 +1,4 @@
-# Performance on mapping 3 separate branches of glutamatergic neurons with a panel of 12 genes for different weighting matrix (ALM or VISp).
-# 3 different weight matrices: (All cell types), non-neuronal cells weight 0, non-glutamatergic neurons weight 0, not in branch neurons weight 0
+# Poster Figure 1: This figure shows performance on mapping all 117 neuron types in the Allen mouse RNAseq dataset with a panel of 1 to 96 genes.
 
 getWeightMatrix = function(initialWeightMatrix, clustersToMerge, weight = 0){
   initialWeightMatrix[clustersToMerge, clustersToMerge] = initialWeightMatrix[clustersToMerge, clustersToMerge]*weight
@@ -13,8 +12,6 @@ getFishPanelAndFScore = function(mapDat, runGenes, clusters, medianExpr, weightM
   if (is.na(focusGroup)){
     focusGroup = unique(clusters)
   }
-  
-  print(focusGroup)
   
   corDist         <- function(x) return(as.dist(1-cor(x)))
   clusterDistance <- as.matrix(corDist(medianExpr))
@@ -53,7 +50,6 @@ data = as.matrix(log(allData[[1]]+1,2))
 coldata = allData[[2]]
 rowdata = allData[[3]]
 rownames(data) = rowdata[,1]
-
 data = data[,table(coldata[,'cluster'])[coldata[,'cluster']] > 1]
 coldata = coldata[table(coldata[,'cluster'])[coldata[,'cluster']] > 1,]
 
@@ -70,40 +66,54 @@ medianExpr = medianExpr[nonZeroMedian,]
 maxGene = 'Rorb'
 maxOn = 2^max(medianExpr[maxGene,])-1
 minOn = 0.1
-# We load a hierarchical clustering result of the data to define our focusGroup and clusters to merge:
-load('res.RData') # Load a hierarchical clustering result of the data
-dendrogramOrder = res[[4]][res[[3]]]
-focusGroupsList = list(c(dendrogramOrder[3:10], dendrogramOrder[31:38]), dendrogramOrder[11:30], dendrogramOrder[39:57])
+focusGroup = unique(specific_type[coldata['class'] == 'Glutamatergic' | coldata['class'] == 'GABAergic'])
 weightMatrix = matrix(1,length(unique(specific_type)), length(unique(specific_type)))
 colnames(weightMatrix) = rownames(weightMatrix) = unique(specific_type)
 lossFunctionList = c('negative F-Score', 'Correlation Distance')
+k = 1
 
-for (i in 1:length(focusGroupsList)){
-  ### This is the list we will iterate trough to see if focussing on branches closer to our group of interest (focusGroup) will improve performance 
-  clustersToMergeList = list(c(), dendrogramOrder[(length(dendrogramOrder)-15):length(dendrogramOrder)],
-                             dendrogramOrder[c(1:2, 58:length(dendrogramOrder))], dendrogramOrder[!dendrogramOrder %in% focusGroupsList[[i]]])
+runGenes <- filterPanelGenes(
+  summaryExpr = 2^medianExpr-1,  # medians (could also try means); We enter linear values to match the linear limits below
+  propExpr    = propExpr,    # proportions
+  startingGenes  = c(),  # Starting genes 
+  numBinaryGenes = 1000,      # Number of binary genes 
+  onClusters = focusGroup,
+  minOn     = minOn,   # Minimum required expression in highest expressing cell type
+  maxOn     = maxOn,  # Maximum allowed expression
+  fractionOnClusters = 0.5,  # Max fraction of on clusters 
+  excludeFamilies = c("LOC","Fam","RIK","RPS","RPL","\\-","Gm","Rnf","BC0")) # Avoid LOC markers, in this case
+
+clustersToMerge = unique(!specific_type %in% focusGroup)
+newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMerge, weight = 0)
+
+panelSize = 100
+results = list(c(),c())
+
+corDist         <- function(x) return(as.dist(1-cor(x)))
+clusterDistance <- as.matrix(corDist(medianExpr))
+weightMatrix = weightMatrix[rownames(clusterDistance), colnames(clusterDistance)]
+clusterDistance = clusterDistance * newWeightMatrix
+
+fishPanel = c()
+for (pS in 1:panelSize){
+  print(pS)
   
-  runGenes <- filterPanelGenes(
-    summaryExpr = 2^medianExpr-1,  # medians (could also try means); We enter linear values to match the linear limits below
-    propExpr    = propExpr,    # proportions
-    startingGenes  = c(),  # Starting genes 
-    numBinaryGenes = 1000,      # Number of binary genes 
-    onClusters = focusGroupsList[[i]],
-    minOn     = minOn,   # Minimum required expression in highest expressing cell type
-    maxOn     = maxOn,  # Maximum allowed expression
-    fractionOnClusters = 0.5,  # Max fraction of on clusters 
-    excludeFamilies = c("LOC","Fam","RIK","RPS","RPL","\\-","Gm","Rnf","BC0")) # Avoid LOC markers, in this case
+  fishPanel <- buildMappingBasedMarkerPanel(
+    mapDat        = data[runGenes,],                # Data for optimization
+    medianDat     = medianExpr[runGenes,],            # Median expression levels of relevant genes in relevant clusters
+    clustersF     = specific_type,                         # Vector of cluster assignments
+    panelSize     = pS,                               # Final panel size
+    currentPanel  = fishPanel,                        # Starting gene panel
+    subSamp       = NA,                          # Maximum number of cells per cluster to include in analysis (20-50 is usually best)
+    panelMin      = 1,
+    optimize      = lossFunctionList[[k]],                     # CorrelationDistance maximizes the cluster distance as described
+    clusterDistance = clusterDistance,                # Cluster distance matrix (potentiall multiplied by weight matrix)
+    focusGroup = focusGroup,
+    percentSubset = 100                               # Only consider a certain percent of genes each iteration to speed up calculations (in most cases this is not recommeded)
+  )
   
-  for (j in 1:length(clustersToMergeList)){
-   newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMergeList[[j]][clustersToMergeList[[j]] %in% specific_type], weight = 0)
-   
-   for (k in 1:length(lossFunctionList)){
-     results = getFishPanelAndFScore(data, runGenes, specific_type, medianExpr, newWeightMatrix, panelSize = 24, focusGroup = focusGroupsList[[i]][focusGroupsList[[i]] %in% specific_type], 
-                                      panelMin = 1, subSamp = NA, startingPanel = c(), lossFunction = lossFunctionList[[k]])
-     print(results)
-     save(results, file = paste(savingDirectory, 'accuracy/allen_results_','focusGroup', as.character(i), 'clustersToMerge', as.character(j),'lossFunction', as.character(k), '.RData', sep = ""))
-   }
- }
+  save(fishPanel, file = paste(savingDirectory, 'markerGenes/allen_markerGenesNeurons_ALM-VISp_100genes_lossFunction', as.character(k), '.RData', sep = ""))
 }
+
 
 
