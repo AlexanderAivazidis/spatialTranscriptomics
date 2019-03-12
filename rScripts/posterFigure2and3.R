@@ -78,7 +78,7 @@ runGenes <- filterPanelGenes(
   propExpr    = propExpr,    # proportions
   startingGenes  = c(),  # Starting genes 
   numBinaryGenes = 1000,      # Number of binary genes 
-  onClusters = focusGroup,
+  onClusters = as.character(focusGroup),
   minOn     = minOn,   # Minimum required expression in highest expressing cell type
   maxOn     = maxOn,  # Maximum allowed expression
   fractionOnClusters = 0.5,  # Max fraction of on clusters 
