@@ -42,10 +42,10 @@ getFishPanelAndFScore = function(mapDat, runGenes, clusters, medianExpr, weightM
 require(AllenData)
 require(mfishtools)
 require(matrixStats)
-dataDirectory = '/home/jovyan/allData/AllenData/'
-savingDirectory = '/home/jovyan/spatialTranscriptomics/'
+dataDirectory = '/nfs/team205/aa16/AllenData/'
+savingDirectory = ''
 
-allData = loadAllenData(cortical_area = 'ALM', species = 'mouse', normalization = 'exon+intron_cpm', directory = dataDirectory)
+allData = loadAllenData(cortical_area = c('ALM','VISp'), species = 'mouse', normalization = 'exon+intron_cpm', directory = dataDirectory)
 data = as.matrix(log(allData[[1]]+1,2))
 coldata = allData[[2]]
 rowdata = allData[[3]]
