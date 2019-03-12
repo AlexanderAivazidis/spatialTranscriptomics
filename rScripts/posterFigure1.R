@@ -105,7 +105,7 @@ for (pS in 1:panelSize){
     clustersF     = specific_type,                         # Vector of cluster assignments
     panelSize     = pS,                               # Final panel size
     currentPanel  = fishPanel,                        # Starting gene panel
-    subSamp       = NA,                          # Maximum number of cells per cluster to include in analysis (20-50 is usually best)
+    subSamp       = 50,                          # Maximum number of cells per cluster to include in analysis (20-50 is usually best)
     panelMin      = 1,
     optimize      = lossFunctionList[[k]],                     # CorrelationDistance maximizes the cluster distance as described
     clusterDistance = clusterDistance,                # Cluster distance matrix (potentiall multiplied by weight matrix)

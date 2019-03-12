@@ -44,8 +44,8 @@ getFishPanelAndFScore = function(mapDat, runGenes, clusters, medianExpr, weightM
 require(AllenData)
 require(mfishtools)
 require(matrixStats)
-dataDirectory = '/home/jovyan/allData/AllenData/'
-savingDirectory = '/home/jovyan/spatialTranscriptomics/'
+dataDirectory = '/nfs/team205/aa16/AllenData/'
+savingDirectory = ''
 
 allData = loadAllenData(cortical_area = 'ALM', species = 'mouse', normalization = 'exon+intron_cpm', directory = dataDirectory)
 data = as.matrix(log(allData[[1]]+1,2))
@@ -65,6 +65,7 @@ propExpr   = do.call("cbind", tapply(names(specific_type), specific_type, functi
 rownames(medianExpr) <- rownames(propExpr) <- genes <- rownames(data)
 nonZeroMedian = (!rowSums(medianExpr) == 0)
 medianExpr = medianExpr[nonZeroMedian,]
+propExpr = propExpr[nonZeroMedian,]
 maxGene = 'Rorb'
 maxOn = 2^max(medianExpr[maxGene,])-1
 minOn = 0.1
@@ -78,7 +79,7 @@ runGenes <- filterPanelGenes(
   propExpr    = propExpr,    # proportions
   startingGenes  = c(),  # Starting genes 
   numBinaryGenes = 1000,      # Number of binary genes 
-  onClusters = focusGroup,
+  onClusters = as.character(focusGroup),
   minOn     = minOn,   # Minimum required expression in highest expressing cell type
   maxOn     = maxOn,  # Maximum allowed expression
   fractionOnClusters = 0.5,  # Max fraction of on clusters 
@@ -87,7 +88,7 @@ runGenes <- filterPanelGenes(
 clustersToMerge = unique(!specific_type %in% focusGroup)
 newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMerge, weight = 0)
 
-panelSize = 100
+panelSize = 36
 results = list(c(),c())
 
 corDist         <- function(x) return(as.dist(1-cor(x)))
@@ -106,7 +107,7 @@ for (k in c(1,2)){
       clustersF     = specific_type,                         # Vector of cluster assignments
       panelSize     = pS,                               # Final panel size
       currentPanel  = fishPanel,                        # Starting gene panel
-      subSamp       = NA,                          # Maximum number of cells per cluster to include in analysis (20-50 is usually best)
+      subSamp       = 50,                          # Maximum number of cells per cluster to include in analysis (20-50 is usually best)
       panelMin      = 1,
       optimize      = lossFunctionList[[k]],                     # CorrelationDistance maximizes the cluster distance as described
       clusterDistance = clusterDistance,                # Cluster distance matrix (potentiall multiplied by weight matrix)
