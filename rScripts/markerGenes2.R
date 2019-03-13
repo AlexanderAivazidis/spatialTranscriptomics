@@ -259,7 +259,7 @@ runMarkerSelection = function(data, coldata, omersGenes, focusGroups, directory,
                      as.character(i),'of', as.character(groups),'_panelMin', as.character(panelMin),
                      '_confusionMatrix.pdf', sep = ""), width = 12 , height = 8)
     
-    heatmap.2(pmin(membConfusionProp_reduced,0.25),Rowv=NA,Colv=NA,dendrogram = "none",
+    heatmap.2(pmin(membConfusionProp,0.25),Rowv=NA,Colv=NA,dendrogram = "none",
               main=paste('Confusion Matrix for \n', cortical_area,  ' ', split, ' group ',
                          as.character(i),' of ', as.character(groups), sep = " "),
               trace = "none", margins = c(12,12))
