@@ -95,7 +95,7 @@ clusterDistance <- as.matrix(corDist(medianExpr))
 weightMatrix = weightMatrix[rownames(clusterDistance), colnames(clusterDistance)]
 clusterDistance = clusterDistance * newWeightMatrix
 
-fishPanel = c()
+load(paste(savingDirectory, 'markerGenes/allen_markerGenesNeurons_ALM-VISp_100genes_lossFunctionNew', as.character(k), '.RData', sep = ""))
 for (pS in 1:panelSize){
   print(pS)
   

@@ -96,7 +96,7 @@ runGenes <- filterPanelGenes(
   fractionOnClusters = 0.5,  # Max fraction of on clusters 
   excludeFamilies = c("LOC","Fam","RIK","RPS","RPL","\\-","Gm","Rnf","BC0")) # Avoid LOC markers, in this case
 
-for (j in 2:length(clustersToMergeList)){
+for (j in 4:length(clustersToMergeList)){
  newWeightMatrix = getWeightMatrix(weightMatrix, clustersToMergeList[[j]][clustersToMergeList[[j]] %in% specific_type], weight = 0)
  
  k = 1
