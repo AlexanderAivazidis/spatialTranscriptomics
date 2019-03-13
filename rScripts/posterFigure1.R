@@ -113,7 +113,7 @@ for (pS in 1:panelSize){
     percentSubset = 100                               # Only consider a certain percent of genes each iteration to speed up calculations (in most cases this is not recommeded)
   )
   
-  save(fishPanel, file = paste(savingDirectory, 'markerGenes/allen_markerGenesNeurons_ALM-VISp_100genes_lossFunction', as.character(k), '.RData', sep = ""))
+  save(fishPanel, file = paste(savingDirectory, 'markerGenes/allen_markerGenesNeurons_ALM-VISp_100genes_lossFunctionNew', as.character(k), '.RData', sep = ""))
 }
 
 
