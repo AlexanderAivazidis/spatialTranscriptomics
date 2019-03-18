@@ -26,6 +26,10 @@ cpmAllenData("mouse_ALM_2018-06-14")  # Anterior Lateral Motor Area
 cpmAllenData("mouse_ACA_2018-10-04")  # Anterior Cingulate Area
 cpmAllenData("mouse_MOp_cells_2018-10-04") # Primary Motor Area
 
+cpmAllenData("human_ACC_2018-10-04")  # Anterior Cingulate Cortex
+cpmAllenData("human_MTG_2018-06-14") # Middle Temporal Gyrus
+cpmAllenData("human_VISp_2018-10-04") # Primary Visual Cortex
+
 ## Get rpkm normalization for exon count matrix
 
 # Get length of all genes:
@@ -92,5 +96,10 @@ subsampleAllenData_RPKM = function(file, n = 10){
 
 subsampleAllenData_RPKM("mouse_VISp_2018-06-14") # Primary Visual Cortex
 subsampleAllenData_RPKM("mouse_ALM_2018-06-14")  # Anterior Lateral Motor Area
+
+# Get Median expression per cell type for mouse:
+
+
+
 
 
