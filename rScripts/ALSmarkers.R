@@ -1,7 +1,7 @@
 # Check expression of OpenTargets top hits for ALS for expression in Allen data
 
 require(ComplexHeatmap)
-
+require(mfishtools)
 require(AllenData)
 require(mfishtools)
 require(matrixStats)
@@ -24,10 +24,13 @@ data = data[,table(coldata[,'cluster'])[coldata[,'cluster']] > 1]
 coldata = coldata[table(coldata[,'cluster'])[coldata[,'cluster']] > 1,]
 specific_type = coldata[,'cluster']
 names(specific_type) = coldata[,1]
+exprThresh = 1
 medianExpr = do.call("cbind", tapply(names(specific_type), specific_type, function(x) rowMedians(data[,x])))
-rownames(medianExpr) <- rownames(data)
+propExpr   = do.call("cbind", tapply(names(specific_type), specific_type, function(x) rowMeans(data[,x]>exprThresh)))
+rownames(medianExpr) <- rownames(propExpr) =  rownames(data)
 
 save(medianExpr, file = 'medianExpr_logCPM_ALM-VISp.RData')
+save(propExpr, file = 'propExpr_logCPM_ALM-VISp.RData')
 load('medianExpr_logCPM_ALM-VISp.RData')
 load('res.RData')
 
@@ -51,9 +54,8 @@ tab[,1][tab[,1] == 'CFAP410'] = '1810043G02RIK'
 leftOver = tab[,1][which(!tab[,1] %in% rownames(medianExpr))]
 
 # Keep genes that have expression greater x rawcounts in at least 1 cell type:
-additionalGenes = c('SQSTM1')
 
-geneTab = medianExpr[c(tab[,1], additionalGenes),]
+geneTab = medianExpr[tab[,1],]
 geneTab = 2^geneTab-1
 cutoff = 1
 binaryTab = geneTab > cutoff
@@ -64,9 +66,78 @@ geneTab = geneTab[binary > 0,]
 geneTab = log(geneTab+1,2)
 associationScore = tab[,2]
 names(associationScore) = tab[,1]
+associationScore = associationScore[binary > 0]
 
 type = gsub("s\\d+_", "", colnames(geneTab))
 ha = HeatmapAnnotation(df = data.frame(type = type))
+
+geneTab = geneTab[,res[[4]][res[[3]]]]
+
+hm = Heatmap(geneTab, cluster_columns = FALSE, name = 'log2(CPM + 1)')
+pdf(file = 'MNDgenes_medianExpression.pdf', width = 21, height = 14)
+print(hm)
+dev.off()
+
+geneTab = cbind(associationScore, geneTab)
+geneTab = geneTab[sample(1:dim(geneTab)[1], dim(geneTab)[1]),]
+# Calculate beta score for each gene and rank by it:
+load('propExpr_logCPM_ALM-VISp.RData')
+rownames(propExpr) = toupper(rownames(propExpr))
+beta = getBetaScore(propExpr, returnScore = TRUE)
+beta = beta[rownames(geneTab)]
+geneTab = cbind(beta, geneTab)
+geneTab = geneTab[order(-geneTab[,1]),]
+write.table(geneTab, file = 'MNDgenes_medianExpression.txt', quote = FALSE, row.names = TRUE, col.names = TRUE)
+MDSgenes = rownames(geneTab)
+save(MDSgenes, file = 'markerGenes/MND_genes.RData')
+
+# Now same for ALS
+
+options(stringsAsFactors = FALSE)
+tab1 = read.csv('targets_associated_with_amyotrophic_lateral_sclerosis.csv')
+tab1 = tab1[,c(1,4)]
+additionalGene = tab1[which(tab1[,1] == 'SQSTM1'),]
+tab1 = tab1[order(-tab1[,2]),]
+tab1 = tab1[tab1[,2] > 0,]
+tab1 = rbind(tab1[1:50,], additionalGene)
+
+rownames(medianExpr) = toupper(rownames(medianExpr))
+tab1[,1] = toupper(tab1[,1])
+
+leftOver = tab1[,1][which(!tab1[,1] %in% rownames(medianExpr))]
+tab1[,1][tab1[,1] == "CFAP410"] = '1810043G02RIK'
+
+leftOver = tab1[,1][which(!tab1[,1] %in% rownames(medianExpr))]
+tab1[,1][tab1[,1] == "C9ORF72"] = '3110043O21RIK'
+
+leftOver = tab1[,1][which(!tab1[,1] %in% rownames(medianExpr))]
+tab1[,1][tab1[,1] == "WASHC5"] = 'E430025E21RIK'
+
+leftOver = tab1[,1][which(!tab1[,1] %in% rownames(medianExpr))]
+tab1[,1][tab1[,1] == "KIAA0513"] = '6430548M08RIK'
+
+leftOver = tab1[,1][which(!tab1[,1] %in% rownames(medianExpr))]
+
+print(leftOver)
+
+tab = tab1
+tab1 = tab1[!tab1[,1] %in% leftOver,]
+
+# Keep genes that have expression greater x rawcounts in at least 1 cell type:
+
+geneTab = medianExpr[tab1[,1],]
+geneTab = 2^geneTab-1
+cutoff = 1
+binaryTab = geneTab > cutoff
+binary = rowSums(binaryTab)
+print(sum(binary == 0))
+geneTab = geneTab[binary > 0,]
+
+geneTab = log(geneTab+1,2)
+associationScore = tab1[,2]
+names(associationScore) = tab1[,1]
+associationScore = c(associationScore[binary > 0 ], tab[,2][tab[,1] == leftOver])
+names(associationScore)[length(associationScore)] = leftOver
 
 geneTab = geneTab[,res[[4]][res[[3]]]]
 
@@ -77,12 +148,24 @@ dev.off()
 
 ALSgenes = rownames(geneTab)
 save(ALSgenes, file = 'markerGenes/ALS_genes.RData')
-geneTab = geneTab[sample(1:dim(geneTab)[1], dim(geneTab)[1]),]
+geneTab = rbind(geneTab, rep(NA, dim(geneTab)[2]))
+rownames(geneTab)[dim(geneTab)[1]] = leftOver[1]
+geneTab = cbind(associationScore, geneTab)
+geneTab = geneTab[order(-geneTab[,1]),]
 write.table(geneTab, file = 'ALSgenes_medianExpression.txt', quote = FALSE, row.names = TRUE, col.names = TRUE)
 
 # Now combine these markers with cell type markers and assess classification performance:
 
-load('markerGenes/')
+load('markerGenes/ALS_genes.RData')
+load('markerGenes/MND_genes.RData')
+load('markerGenes/allen_markerGenesNeurons_ALM-VISp_allCells_100genes_lossFunctionNew1.RData')
+geneTab = medianExpr[toupper(fishPanel),]
+geneTab = geneTab[,res[[4]][res[[3]]]]
+hm = Heatmap(geneTab, cluster_columns = FALSE, name = 'log2(CPM + 1)')
+pdf(file = 'celltypeMarkers_medianExpression.pdf', width = 21, height = 14)
+print(hm)
+dev.off()
+write.table(geneTab, file = 'celltypeMarkers_medianExpression.csv', quote = FALSE, row.names = TRUE, col.names = TRUE, sep = ',')
 
-
-
+fishPanel = c(fishPanel, ALSgenes, MSDgenes)
+accuracy = fractionCorrectWithGenes(orderedGenes = fishPanel, mapDat = data, medianDat = medianExpr, plot = FALSE, clustersF = specific_type)
