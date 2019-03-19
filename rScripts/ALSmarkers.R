@@ -8,6 +8,9 @@ require(matrixStats)
 dataDirectory = '/home/jovyan/allData/AllenData/'
 savingDirectory = '/home/jovyan/spatialTranscriptomics/'
 
+dataDirectory = '/nfs/team205/aa16/AllenData/'
+savingDirectory = ''
+
 setwd(savingDirectory)
 
 options(stringsAsFactors = FALSE) 
@@ -73,7 +76,13 @@ print(hm)
 dev.off()
 
 ALSgenes = rownames(geneTab)
-save(geneTab, file = 'markerGenes/ALS_genes.RData')
+save(ALSgenes, file = 'markerGenes/ALS_genes.RData')
 geneTab = geneTab[sample(1:dim(geneTab)[1], dim(geneTab)[1]),]
 write.table(geneTab, file = 'ALSgenes_medianExpression.txt', quote = FALSE, row.names = TRUE, col.names = TRUE)
+
+# Now combine these markers with cell type markers and assess classification performance:
+
+load('markerGenes/')
+
+
 
