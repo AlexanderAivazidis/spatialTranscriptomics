@@ -1,10 +1,11 @@
 ### Get cell type taxonomy, then marker genes for the kidney data
 require(Matrix)
 require(myUtils)
+require(mfishtools)
+require(matrixStats)
 
 directory = '/nfs/team205/aa16/KidneyData/'
 capture_efficiency = 0.145
-
 
 coldata = read.delim('/nfs/team205/aa16/KidneyData/cellManifestCompressed.tsv')
 data = readMM('/nfs/team205/aa16/KidneyData/tableOfCounts.mtx')
@@ -30,6 +31,13 @@ for (i in c(1,2,3,5,6,7,8)){
   rm(dense_matrix) 
 }
 rm(data)
+
+for (i in c(1,2,3,5,6,7,8)){
+  print(names(dropletID_List)[i])
+  coldata_subset = coldata[coldata[,'DropletID'] %in% dropletID_List[[i]],]
+  write.table(coldata_subset, file = paste(directory, 'coldata_', names(dropletID_List)[i], '.txt', sep = ''), sep = '\t', quote = F)
+  rm(coldata_subset) 
+}
 
 # Cell type taxonomy:
 
@@ -140,7 +148,7 @@ getCellTaxonomy = function(data, celltypes, verbose = TRUE, type = 'mean'){
   return(res)
 }
 
-for (i in c(7,8)){
+for (i in c(1,2,3,5,6,7,8)){
   print(names(dropletID_List)[i])
   dense_matrix = read.delim(paste(directory, 'cpmMatrix_', names(dropletID_List)[i], '.txt', sep = ''), sep = '\t')
   cell_taxonomy = getCellTaxonomy(dense_matrix, coldata[coldata[,'Compartment'] == names(dropletID_List)[i],'ClusterID'])
@@ -148,5 +156,56 @@ for (i in c(7,8)){
   rm(dense_matrix)
 }
 
+### Now select 36 markers for each dataset:
 
+options(stringsAsFactors = FALSE)
 
+for (i in c(1,2,3,4,5,6,7,8)){
+  dense_matrix = read.delim(paste(directory, 'cpmMatrix_', names(dropletID_List)[i], '.txt', sep = ''), sep = '\t')
+  colnames(dense_matrix) = substring(colnames(dense_matrix),2)
+  coldata = read.delim(paste(directory, 'coldata_', names(dropletID_List)[i], '.txt', sep = ''))
+  normDat = log(dense_matrix+1,2)
+  
+  cl = coldata[,'ClusterID']
+  names(cl) = dropletID_List[[i]]
+  
+  exprThresh = 1
+  medianExpr = do.call("cbind", tapply(names(cl), as.factor(cl), function(x) apply(normDat[,x],1, function(y) mean(y)))) 
+  propExpr   = do.call("cbind", tapply(names(cl), cl, function(x) rowMeans(normDat[,x]>exprThresh))) 
+  rownames(medianExpr) <- rownames(propExpr) <- genes <- rownames(normDat) 
+  
+  nonZeroMedian = (!rowSums(medianExpr) == 0)
+  medianExpr = medianExpr[nonZeroMedian,]
+  propExpr = propExpr[nonZeroMedian,]
+  
+  runGenes <- filterPanelGenes(
+    summaryExpr = 2^medianExpr-1,  # medians (could also try means); We enter linear values to match the linear limits below
+    propExpr    = propExpr,    # proportions
+    geneLengths = NULL,        # vector of gene lengths (not included here)
+    numBinaryGenes = 500,      # Number of binary genes (explained below)
+    startingGenes = c(),
+    minOn     = 5,   # Minimum required expression in highest expressing cell type
+    maxOn     = 1000,  # Maximum allowed expression
+    fractionOnClusters = 0.5,  # Max fraction of on clusters (described above)
+    excludeGenes    = NULL,    # Genes to exclude.  Often sex chromosome or mitochondrial genes would be input here.
+    excludeFamilies = c("LOC","Fam","RIK","RPS","RPL","\\-","Gm","Rnf","BC0")) # Avoid LOC markers, in this case
+  
+  corDist         <- function(x) return(as.dist(1-cor(x)))
+  clusterDistance <- as.matrix(corDist(medianExpr[runGenes,]))
+  print(dim(clusterDistance))
+  
+  fishPanel <- buildMappingBasedMarkerPanel(
+    mapDat        = normDat[runGenes,],     # Data for optimization
+    medianDat     = medianExpr[runGenes,], # Median expression levels of relevant genes in relevant clusters
+    clustersF     = cl,                   # Vector of cluster assignments
+    panelSize     = 6,                           # Final panel size
+    currentPanel  = NULL,            # Starting gene panel
+    subSamp       = 10,
+    panelMin = 1,# Maximum number of cells per cluster to include in analysis (20-50 is usually best)
+    optimize      = "CorrelationDistance",        # CorrelationDistance maximizes the cluster distance as described
+    clusterDistance = clusterDistance,            # Cluster distance matrix
+    percentSubset = 10                           # Only consider a certain percent of genes each iteration to speed up calculations (in most cases this is not recommeded)
+  ) 
+  
+  save(fishPanel, file = paste('markerGenes/fishPanel_KidneyProject_', names(dropletID_List)[i], '.RData'))
+}
