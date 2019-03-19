@@ -87,9 +87,9 @@ beta = getBetaScore(propExpr, returnScore = TRUE)
 beta = beta[rownames(geneTab)]
 geneTab = cbind(beta, geneTab)
 geneTab = geneTab[order(-geneTab[,1]),]
-write.table(geneTab, file = 'MNDgenes_medianExpression.txt', quote = FALSE, row.names = TRUE, col.names = TRUE)
-MDSgenes = rownames(geneTab)
-save(MDSgenes, file = 'markerGenes/MND_genes.RData')
+write.csv(geneTab, file = 'MNDgenes_medianExpression.csv', quote = FALSE, row.names = TRUE)
+MNDgenes = rownames(geneTab)
+save(MNDgenes, file = 'markerGenes/MND_genes.RData')
 
 # Now same for ALS
 
@@ -152,7 +152,7 @@ geneTab = rbind(geneTab, rep(NA, dim(geneTab)[2]))
 rownames(geneTab)[dim(geneTab)[1]] = leftOver[1]
 geneTab = cbind(associationScore, geneTab)
 geneTab = geneTab[order(-geneTab[,1]),]
-write.table(geneTab, file = 'ALSgenes_medianExpression.txt', quote = FALSE, row.names = TRUE, col.names = TRUE)
+write.csv(geneTab, file = 'ALSgenes_medianExpression.csv', quote = FALSE, row.names = TRUE)
 
 # Now combine these markers with cell type markers and assess classification performance:
 
@@ -165,7 +165,8 @@ hm = Heatmap(geneTab, cluster_columns = FALSE, name = 'log2(CPM + 1)')
 pdf(file = 'celltypeMarkers_medianExpression.pdf', width = 21, height = 14)
 print(hm)
 dev.off()
-write.table(geneTab, file = 'celltypeMarkers_medianExpression.csv', quote = FALSE, row.names = TRUE, col.names = TRUE, sep = ',')
+write.csv(geneTab, file = 'celltypeMarkers_medianExpression.csv', quote = FALSE, row.names = TRUE)
 
-fishPanel = c(fishPanel, ALSgenes, MSDgenes)
+fishPanel = c(fishPanel, ALSgenes, MNDgenes)
+fishPanel = fishPanel[1:150]
 accuracy = fractionCorrectWithGenes(orderedGenes = fishPanel, mapDat = data, medianDat = medianExpr, plot = FALSE, clustersF = specific_type)
