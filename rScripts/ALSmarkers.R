@@ -161,18 +161,18 @@ load('markerGenes/MND_genes.RData')
 load('markerGenes/allen_markerGenesNeurons_ALM-VISp_allCells_100genes_lossFunctionNew1.RData')
 # Get ensemble names:
 rowdata = read.table('../allData/AllenData/mouse_ALM_2018-06-14_genes-rows.csv', sep = ',')
-entrezIds = rowdata[rowdata[,1] %in% fishPanel,4]
+entrezIds = rowdata[match(fishPanel, rowdata[,1]),4]
 library('biomaRt')
 mart <- useDataset("mmusculus_gene_ensembl", useMart("ensembl"))
 G_list <- getBM(filters= "entrezgene", attributes= c("ensembl_gene_id",
                                                           "entrezgene"),values=entrezIds,mart= mart)
 
 fullPanel = cbind(fishPanel[match(G_list[,2], entrezIds)], G_list)
-extra1 = c('Rorb', 'ENSMUSG00000036192', '107350')
-extra2 = c("Nacc2", 'ENSMUSG00000026932', '21577')
+extra1 = c('AW112010', 'ENSMUSG00000075010', '107350')
+extra2 = c("Tcrb", 'NA', '21577')
 fullPanel = rbind(fullPanel, extra1, extra2)
 colnames(fullPanel)[1] = 'gene_symbol'
-write.csv(geneTab, file = 'ALSgenes_medianExpression.csv', quote = FALSE, row.names = TRUE)
+write.csv(fullPanel, file = 'celltypeMarkers_MouseCortex.csv', quote = FALSE, row.names = TRUE)
 
 geneTab = medianExpr[toupper(fishPanel),]
 geneTab = geneTab[,res[[4]][res[[3]]]]
