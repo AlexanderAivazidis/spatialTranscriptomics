@@ -159,6 +159,21 @@ write.csv(geneTab, file = 'ALSgenes_medianExpression.csv', quote = FALSE, row.na
 load('markerGenes/ALS_genes.RData')
 load('markerGenes/MND_genes.RData')
 load('markerGenes/allen_markerGenesNeurons_ALM-VISp_allCells_100genes_lossFunctionNew1.RData')
+# Get ensemble names:
+rowdata = read.table('../allData/AllenData/mouse_ALM_2018-06-14_genes-rows.csv', sep = ',')
+entrezIds = rowdata[rowdata[,1] %in% fishPanel,4]
+library('biomaRt')
+mart <- useDataset("mmusculus_gene_ensembl", useMart("ensembl"))
+G_list <- getBM(filters= "entrezgene", attributes= c("ensembl_gene_id",
+                                                          "entrezgene"),values=entrezIds,mart= mart)
+
+fullPanel = cbind(fishPanel[match(G_list[,2], entrezIds)], G_list)
+extra1 = c('Rorb', 'ENSMUSG00000036192', '107350')
+extra2 = c("Nacc2", 'ENSMUSG00000026932', '21577')
+fullPanel = rbind(fullPanel, extra1, extra2)
+colnames(fullPanel)[1] = 'gene_symbol'
+write.csv(geneTab, file = 'ALSgenes_medianExpression.csv', quote = FALSE, row.names = TRUE)
+
 geneTab = medianExpr[toupper(fishPanel),]
 geneTab = geneTab[,res[[4]][res[[3]]]]
 hm = Heatmap(geneTab, cluster_columns = FALSE, name = 'log2(CPM + 1)')
@@ -174,4 +189,13 @@ fishPanel = toupper(fishPanel)
 rownames(data) = toupper(rownames(data))
 accuracy = fractionCorrectWithGenes(orderedGenes = fishPanel, mapDat = data, medianDat = medianExpr, plot = FALSE, clustersF = specific_type)
 print(accuracy)
+
+plot(1:length(accuracy), accuracy/100, pch = 16,
+     col = c(rep("red", 88), rep('blue', length(ALSgenes)), rep('green', length(MNDgenes))), xlab = "Number of genes in panel",
+     ylab = "Accuracy", main = '', ylim =  c(0, 1), lwd = 5, cex.lab = 1.5, cex.axis = 1.5)
+abline(h = c(0,0.2,0.4,0.6,0.8,1), lty = "dotted", col = 'grey', lwd = 3)
+abline(h = 0, col = "black", lwd = 2.5)r
+legend(, legend=c("cell type markers", "ALS genes", "MND genes"),
+       col=c("red","blue", "green"),lwd = 5, cex=1.5, bty = 'n')
+
 
