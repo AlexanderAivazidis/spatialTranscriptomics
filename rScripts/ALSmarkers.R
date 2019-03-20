@@ -162,11 +162,16 @@ load('markerGenes/allen_markerGenesNeurons_ALM-VISp_allCells_100genes_lossFuncti
 geneTab = medianExpr[toupper(fishPanel),]
 geneTab = geneTab[,res[[4]][res[[3]]]]
 hm = Heatmap(geneTab, cluster_columns = FALSE, name = 'log2(CPM + 1)')
-pdf(file = 'celltypeMarkers_medianExpression.pdf', width = 21, height = 14)
+pdf(file = 'celltypeMarkers_medianExpression.pdf', width = 21, height = 20)
 print(hm)
 dev.off()
 write.csv(geneTab, file = 'celltypeMarkers_medianExpression.csv', quote = FALSE, row.names = TRUE)
 
-fishPanel = c(fishPanel, ALSgenes, MNDgenes)
+fishPanel = c(fishPanel, ALSgenes, MNDgenes[!MNDgenes %in% ALSgenes])
 fishPanel = fishPanel[1:150]
+rownames(medianExpr) = toupper(rownames(medianExpr))
+fishPanel = toupper(fishPanel)
+rownames(data) = toupper(rownames(data))
 accuracy = fractionCorrectWithGenes(orderedGenes = fishPanel, mapDat = data, medianDat = medianExpr, plot = FALSE, clustersF = specific_type)
+print(accuracy)
+
