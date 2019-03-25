@@ -3,6 +3,7 @@ require(Matrix)
 require(myUtils)
 require(mfishtools)
 require(matrixStats)
+require(ComplexHeatmap)
 
 directory = '/nfs/team205/aa16/KidneyData/'
 capture_efficiency = 0.145
@@ -160,7 +161,7 @@ for (i in c(1,2,3,5,6,7,8)){
 
 options(stringsAsFactors = FALSE)
 
-for (i in c(1,2,3,4,5,6,7,8)){
+for (i in c(1,2,3,5,6,7,8)){
   dense_matrix = read.delim(paste(directory, 'cpmMatrix_', names(dropletID_List)[i], '.txt', sep = ''), sep = '\t')
   colnames(dense_matrix) = substring(colnames(dense_matrix),2)
   coldata = read.delim(paste(directory, 'coldata_', names(dropletID_List)[i], '.txt', sep = ''))
@@ -198,14 +199,50 @@ for (i in c(1,2,3,4,5,6,7,8)){
     mapDat        = normDat[runGenes,],     # Data for optimization
     medianDat     = medianExpr[runGenes,], # Median expression levels of relevant genes in relevant clusters
     clustersF     = cl,                   # Vector of cluster assignments
-    panelSize     = 6,                           # Final panel size
+    panelSize     = 36,                           # Final panel size
     currentPanel  = NULL,            # Starting gene panel
-    subSamp       = 10,
+    subSamp       = 100,
     panelMin = 1,# Maximum number of cells per cluster to include in analysis (20-50 is usually best)
     optimize      = "CorrelationDistance",        # CorrelationDistance maximizes the cluster distance as described
     clusterDistance = clusterDistance,            # Cluster distance matrix
-    percentSubset = 10                           # Only consider a certain percent of genes each iteration to speed up calculations (in most cases this is not recommeded)
+    percentSubset = 100                           # Only consider a certain percent of genes each iteration to speed up calculations (in most cases this is not recommeded)
   ) 
   
   save(fishPanel, file = paste('markerGenes/fishPanel_KidneyProject_', names(dropletID_List)[i], '.RData'))
 }
+
+### Make a plot of performance and marker gene mean expression
+for (i in c(1,2,3,5,6,7,8)){
+  print(i)
+  load(paste('markerGenes/fishPanel_KidneyProject_', names(dropletID_List)[i], '.RData'))
+  dense_matrix = read.delim(paste(directory, 'cpmMatrix_', names(dropletID_List)[i], '.txt', sep = ''), sep = '\t')
+  colnames(dense_matrix) = substring(colnames(dense_matrix),2)
+  coldata = read.delim(paste(directory, 'coldata_', names(dropletID_List)[i], '.txt', sep = ''))
+  normDat = log(dense_matrix+1,2)
+  cl = coldata[,'ClusterID']
+  names(cl) = dropletID_List[[i]]
+  exprThresh = 1
+  medianExpr = do.call("cbind", tapply(names(cl), as.factor(cl), function(x) apply(normDat[,x],1, function(y) mean(y)))) 
+  save(medianExpr, file = paste('/nfs/team205/aa16/KidneyData/medianExpr_KidneyProject_', names(dropletID_List)[i], '.RData'))
+  rownames(medianExpr) <- rownames(normDat) 
+  #accuracy = fractionCorrectWithGenes(orderedGenes = fishPanel, mapDat = normDat, medianDat = medianExpr, clustersF = cl, plot = FALSE)
+  save(accuracy, file = paste('accuracy/accuracy_KidneyProject_', names(dropletID_List)[i], '.RData'))
+}
+
+load('medi')
+plot(1:length(result1[[1]][1:36]), result1[[1]][1:36],
+     type = "l", col = "red", xlab = "Number of genes in panel",
+     ylab = "F1-score", main = '', ylim =  c(-0.2, 1), lwd = 5, cex.lab = 1.5, cex.axis = 1.5)
+lines(1:length(result[[1]][1:36]), result[[1]][1:36], col = 'blue', lwd = 5)
+abline(h = c(0,0.2,0.4,0.6,0.8,1), lty = "dotted", col = 'grey', lwd = 3)
+abline(h = 0, col = "black", lwd = 2.5)
+text(1:length(result1[[1]][1:36]), result1[[1]][1:36]+0.15, fishPanel1[1:length(result1[[1]][1:30])], srt = 90, cex = 1.5, col = 'black')
+text(1:length(result[[1]][1:36]), result[[1]][1:36]-0.15, fishPanel[1:length(result[[1]][1:30])], srt = 90, cex = 1.5, col = 'black')
+legend(0., 1.2, legend=c("VISp glutamatergic neurons", "All neurons"),
+       col=c("red","blue"),lwd = 5, cex=1.5, bty = 'n')
+
+
+
+
+
+
